@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { Mic, MicOff, Volume2, Globe, Heart, Activity, Phone, PhoneOff } from 'lucide-react'
 import './App.css'
 
-const BACKEND_URL = 'http://localhost:8000'
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
+
 
 // Language options
 const LANGUAGES = [
