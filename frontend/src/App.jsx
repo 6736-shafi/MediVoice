@@ -1,0 +1,353 @@
+import { useState, useEffect, useRef } from 'react'
+import { Mic, MicOff, Volume2, Globe, Heart, Activity, Phone, PhoneOff } from 'lucide-react'
+import './App.css'
+
+const BACKEND_URL = 'http://localhost:8000'
+
+// Language options
+const LANGUAGES = [
+  { code: 'en', name: 'English', flag: '🇺🇸' },
+  { code: 'es', name: 'Spanish', flag: '🇪🇸' },
+  { code: 'hi', name: 'Hindi', flag: '🇮🇳' },
+  { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
+  { code: 'zh', name: 'Chinese', flag: '🇨🇳' },
+  { code: 'fr', name: 'French', flag: '🇫🇷' },
+  { code: 'de', name: 'German', flag: '🇩🇪' },
+  { code: 'pt', name: 'Portuguese', flag: '🇧🇷' },
+  { code: 'ru', name: 'Russian', flag: '🇷🇺' },
+  { code: 'ja', name: 'Japanese', flag: '🇯🇵' }
+]
+
+function App() {
+  const [selectedLanguage, setSelectedLanguage] = useState('en')
+  const [isListening, setIsListening] = useState(false)
+  const [isSpeaking, setIsSpeaking] = useState(false)
+  const [conversation, setConversation] = useState([])
+  const [status, setStatus] = useState('Ready to start')
+  const [currentTranscript, setCurrentTranscript] = useState('')
+  
+  const recognitionRef = useRef(null)
+  const audioRef = useRef(null)
+
+  // Initialize Web Speech API
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
+      recognitionRef.current = new SpeechRecognition()
+      
+      recognitionRef.current.continuous = true
+      recognitionRef.current.interimResults = true
+      
+      // Language mapping for Web Speech API
+      const languageCodes = {
+        'en': 'en-US',
+        'es': 'es-ES',
+        'hi': 'hi-IN',
+        'ar': 'ar-SA',
+        'zh': 'zh-CN',
+        'fr': 'fr-FR',
+        'de': 'de-DE',
+        'pt': 'pt-BR',
+        'ru': 'ru-RU',
+        'ja': 'ja-JP'
+      }
+      
+      recognitionRef.current.lang = languageCodes[selectedLanguage] || 'en-US'
+      
+      recognitionRef.current.onresult = async (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0])
+          .map(result => result.transcript)
+          .join('')
+        
+        setCurrentTranscript(transcript)
+        
+        // If final result, send to backend
+        if (event.results[event.results.length - 1].isFinal) {
+          await handleUserSpeech(transcript)
+          setCurrentTranscript('')
+        }
+      }
+      
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error)
+        setStatus(`Error: ${event.error}`)
+      }
+      
+      recognitionRef.current.onend = () => {
+        if (isListening) {
+          // Restart if still supposed to be listening
+          recognitionRef.current.start()
+        }
+      }
+    } else {
+      setStatus('Speech recognition not supported in this browser')
+    }
+  }, [selectedLanguage])
+
+  // Handle user speech
+  const handleUserSpeech = async (transcript) => {
+    if (!transcript.trim()) return
+
+    // Add user message to conversation
+    setConversation(prev => [...prev, {
+      role: 'user',
+      content: transcript
+    }])
+
+    setStatus('AI is thinking...')
+
+    try {
+      // Send to backend
+      const response = await fetch(`${BACKEND_URL}/api/conversation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: transcript,
+          language: selectedLanguage,
+          conversation_history: conversation
+        })
+      })
+
+      const data = await response.json()
+      
+      // Add AI response to conversation
+      setConversation(prev => [...prev, {
+        role: 'assistant',
+        content: data.text_response
+      }])
+
+      // Play audio response
+      if (data.audio_url) {
+        setStatus('AI is speaking...')
+        await playAudio(data.audio_url)
+      }
+
+      // Check for emergency
+      if (data.medical_context?.is_emergency) {
+        alert('⚠️ EMERGENCY DETECTED: Please seek immediate medical attention or call emergency services!')
+      }
+
+      setStatus('Listening...')
+
+    } catch (error) {
+      console.error('Error:', error)
+      setStatus('Error occurred')
+      setConversation(prev => [...prev, {
+        role: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again.'
+      }])
+    }
+  }
+
+  // Play audio
+  const playAudio = (audioUrl) => {
+    return new Promise((resolve) => {
+      if (audioRef.current) {
+        // IMPORTANT: Stop speech recognition to prevent feedback loop
+        if (recognitionRef.current && isListening) {
+          recognitionRef.current.stop()
+        }
+        
+        setIsSpeaking(true)
+        audioRef.current.src = audioUrl
+        audioRef.current.onended = () => {
+          setIsSpeaking(false)
+          
+          // Resume speech recognition after AI finishes speaking
+          if (recognitionRef.current && isListening) {
+            try {
+              recognitionRef.current.start()
+            } catch (e) {
+              console.log('Recognition already started')
+            }
+          }
+          
+          resolve()
+        }
+        audioRef.current.play()
+      } else {
+        resolve()
+      }
+    })
+  }
+
+  // Start listening
+  const startListening = () => {
+    if (recognitionRef.current) {
+      setIsListening(true)
+      setStatus('Listening...')
+      recognitionRef.current.start()
+    }
+  }
+
+  // Stop listening
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      setIsListening(false)
+      setStatus('Ready to start')
+      recognitionRef.current.stop()
+    }
+  }
+
+  return (
+    <div className="app">
+      {/* Header */}
+      <header className="header">
+        <div className="header-content">
+          <div className="logo">
+            <Heart className="logo-icon" />
+            <h1>MediVoice AI</h1>
+          </div>
+          <p className="tagline">Real-Time Voice Medical Assistant</p>
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <div className="container">
+        {/* Language Selector */}
+        <div className="language-selector">
+          <Globe className="icon" />
+          <select 
+            value={selectedLanguage} 
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+            className="language-select"
+            disabled={isListening}
+          >
+            {LANGUAGES.map(lang => (
+              <option key={lang.code} value={lang.code}>
+                {lang.flag} {lang.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Status Display */}
+        <div className={`status-bar ${isListening ? 'connected' : ''}`}>
+          <Activity className={`status-icon ${isListening ? 'pulse' : ''}`} />
+          <span>{status}</span>
+        </div>
+
+        {/* Current Transcript */}
+        {currentTranscript && (
+          <div className="current-transcript">
+            <p>🎤 {currentTranscript}</p>
+          </div>
+        )}
+
+        {/* Conversation Area */}
+        <div className="conversation-container">
+          {conversation.length === 0 ? (
+            <div className="welcome-message">
+              <Phone className="welcome-icon" />
+              <h2>Voice Medical Consultation</h2>
+              <p>Click "Start Call" to begin speaking with your AI medical assistant</p>
+              <div className="features">
+                <div className="feature">
+                  <Globe /> <span>10+ Languages</span>
+                </div>
+                <div className="feature">
+                  <Volume2 /> <span>Real-Time Voice</span>
+                </div>
+                <div className="feature">
+                  <Heart /> <span>24/7 Available</span>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="messages">
+              {conversation.map((msg, index) => (
+                <div key={index} className={`message ${msg.role}`}>
+                  <div className="message-content">
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Voice Visualizer */}
+        {isListening && (
+          <div className="voice-visualizer-container">
+            <div className={`voice-visualizer ${isSpeaking ? 'speaking' : 'listening'}`}>
+              <div className="wave"></div>
+              <div className="wave"></div>
+              <div className="wave"></div>
+              <div className="wave"></div>
+              <div className="wave"></div>
+            </div>
+            <p className="voice-status">
+              {isSpeaking ? '🔊 AI is speaking...' : '🎤 Listening...'}
+            </p>
+          </div>
+        )}
+
+        {/* Text Input Fallback (for testing) */}
+        {isListening && (
+          <div className="input-container">
+            <input
+              type="text"
+              placeholder="Or type your message here for testing..."
+              className="text-input"
+              onKeyPress={(e) => {
+                if (e.key === 'Enter' && e.target.value.trim()) {
+                  handleUserSpeech(e.target.value)
+                  e.target.value = ''
+                }
+              }}
+            />
+            <button
+              className="send-button"
+              onClick={(e) => {
+                const input = e.target.previousSibling
+                if (input.value.trim()) {
+                  handleUserSpeech(input.value)
+                  input.value = ''
+                }
+              }}
+            >
+              Send
+            </button>
+          </div>
+        )}
+
+        {/* Call Control */}
+        <div className="call-control">
+          {!isListening ? (
+            <button 
+              className="call-button start"
+              onClick={startListening}
+            >
+              <Phone />
+              <span>Start Call</span>
+            </button>
+          ) : (
+            <button 
+              className="call-button end"
+              onClick={stopListening}
+            >
+              <PhoneOff />
+              <span>End Call</span>
+            </button>
+          )}
+        </div>
+
+        {/* Disclaimer */}
+        <div className="disclaimer">
+          <p>⚠️ This is an AI assistant for informational purposes only. Always consult a healthcare professional for medical advice.</p>
+        </div>
+      </div>
+
+      {/* Hidden audio element */}
+      <audio 
+        ref={audioRef}
+        style={{ display: 'none' }}
+      />
+    </div>
+  )
+}
+
+export default App
