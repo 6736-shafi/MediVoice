@@ -613,3 +613,37 @@ body {
     max-width: 85%;
   }
 }
+
+/* Report Action */
+.report-action {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 1rem;
+}
+
+.download-button {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.download-button:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.icon-sm {
+  width: 18px;
+  height: 18px;
+}

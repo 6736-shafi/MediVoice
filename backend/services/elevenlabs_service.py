@@ -96,9 +96,9 @@ class ElevenLabsService:
                 text=text,
                 model_id="eleven_multilingual_v2",  # Multilingual model
                 voice_settings=VoiceSettings(
-                    stability=0.5,
+                    stability=0.4,  # Lower stability = more expressive/variable
                     similarity_boost=0.75,
-                    style=0.5,
+                    style=0.6,      # Higher style = more natural intonation
                     use_speaker_boost=True
                 )
             )

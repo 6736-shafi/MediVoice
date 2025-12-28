@@ -38,6 +38,10 @@ app.add_middleware(
 )
 
 # Pydantic Models
+class ReportRequest(BaseModel):
+    conversation_history: List[dict]
+    language: str = "en"
+
 class ConversationRequest(BaseModel):
     message: str
     language: str = "en"
@@ -115,6 +119,18 @@ async def create_conversation(request: ConversationRequest):
         
     except Exception as e:
         logger.error(f"Error in conversation endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/report")
+async def generate_report(request: ReportRequest):
+    """Generate medical report from conversation"""
+    try:
+        from services.gemini_service import GeminiService
+        service = GeminiService()
+        report = await service.generate_consultation_report(request.conversation_history)
+        return {"report": report}
+    except Exception as e:
+        logger.error(f"Error generating report: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/voice-input")

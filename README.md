@@ -38,10 +38,12 @@ MediVoice AI is an intelligent, multilingual voice medical assistant that combin
 
 ### 🤖 **Intelligent Medical AI**
 - Powered by **Google Gemini 2.0 Flash** for fast, accurate medical guidance
+- **Diagnostic Flow**: Asks clarifying questions before prescribing (duration, severity, symptoms)
+- **Holistic Care**: Provides lifestyle, diet, and precautionary advice with every consultation
 - Context-aware conversations with medical history tracking
 - Emergency detection and urgent care recommendations
 - Symptom analysis and preliminary health assessments
-- Medication information and dosage recommendations
+- Medication information with specific dosages and instructions
 
 ### 🎨 **Premium User Experience**
 - Modern, responsive dark-mode interface
@@ -49,6 +51,8 @@ MediVoice AI is an intelligent, multilingual voice medical assistant that combin
 - Intuitive voice-first design
 - Real-time conversation display with message history
 - Language switcher with flag indicators
+- **PDF Report Generation**: Download professional medical consultation summaries
+- One-click report export with diagnosis, medications, and lifestyle advice
 
 ### 🔒 **Safety & Privacy**
 - Clear disclaimers about AI limitations
@@ -82,6 +86,7 @@ MediVoice AI is an intelligent, multilingual voice medical assistant that combin
 │  │              API Layer (main.py)                      │  │
 │  │  • /api/conversation  • /api/voice-input             │  │
 │  │  • /api/health        • /api/languages               │  │
+│  │  • /api/report        (PDF Generation)               │  │
 │  └──────────────┬───────────────────┬───────────────────┘  │
 │                 │                   │                       │
 │  ┌──────────────▼─────────┐  ┌─────▼──────────────┐       │
@@ -412,6 +417,45 @@ curl -X POST http://localhost:8000/api/voice-input \
   ]
 }
 ```
+
+#### 6. Generate Medical Report
+
+**POST /api/report**
+
+Generate a downloadable PDF medical report from conversation history.
+
+**Request Body:**
+```json
+{
+  "conversation_history": [
+    {
+      "role": "user",
+      "content": "I have a headache"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry to hear that. How long have you had it?"
+    }
+  ],
+  "language": "en"
+}
+```
+
+**Response:**
+```json
+{
+  "report": "{\"patient_symptoms\":\"Headache\",\"diagnosis\":\"Tension headache\",\"medications\":[\"Ibuprofen 400mg\"],\"lifestyle_advice\":\"Rest and hydration\",\"precautions\":\"Avoid bright lights\",\"follow_up\":\"If persists >3 days\"}"
+}
+```
+
+**Frontend Usage:**
+The frontend uses `jsPDF` to parse this JSON and generate a professional PDF document with:
+- Patient symptoms summary
+- Diagnosis
+- Prescribed medications with dosages
+- Lifestyle and diet recommendations
+- Precautions and warnings
+- Follow-up care instructions
 
 ---
 

@@ -1,0 +1,16 @@
+.gcloudignore
+.git
+.gitignore
+node_modules/
+src/
+public/
+*.md
+package.json
+package-lock.json
+vite.config.js
+eslint.config.js
+.env*
+firebase.json
+Dockerfile
+nginx.conf
+server.js

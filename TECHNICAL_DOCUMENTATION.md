@@ -410,6 +410,58 @@ const sendMessage = async (message, language, history) => {
 };
 ```
 
+### 5.4 PDF Report Generation
+
+**Technology:** jsPDF library
+
+**Implementation:**
+
+```javascript
+import { jsPDF } from "jspdf";
+
+const generateReport = async () => {
+  // Fetch report data from backend
+  const response = await fetch(`${API_BASE_URL}/api/report`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      conversation_history: conversation,
+      language: selectedLanguage
+    })
+  });
+  
+  const data = await response.json();
+  const reportData = JSON.parse(data.report);
+  
+  // Generate PDF
+  const doc = new jsPDF();
+  
+  // Add header
+  doc.setFontSize(22);
+  doc.setTextColor(0, 102, 204);
+  doc.text("MediVoice AI - Medical Report", 20, 20);
+  
+  // Add sections
+  addSection("Patient Symptoms", reportData.patient_symptoms);
+  addSection("Diagnosis", reportData.diagnosis);
+  addSection("Medications", reportData.medications);
+  addSection("Lifestyle & Diet", reportData.lifestyle_advice);
+  addSection("Precautions", reportData.precautions);
+  addSection("Follow Up", reportData.follow_up);
+  
+  // Download
+  doc.save("MediVoice_Report.pdf");
+};
+```
+
+**Features:**
+- Professional medical report formatting
+- Automatic pagination for long reports
+- Structured sections for easy reading
+- Downloadable PDF file
+- Includes consultation date and timestamp
+```
+
 ---
 
 ## 6. API Reference
@@ -538,6 +590,39 @@ Currently, the API does not require authentication. API keys are managed server-
 }
 ```
 
+#### POST /api/report
+
+**Description:** Generate PDF medical report from conversation history
+
+**Request Body:**
+```json
+{
+  "conversation_history": [
+    {
+      "role": "user",
+      "content": "I have a headache"
+    },
+    {
+      "role": "assistant",
+      "content": "I'm sorry to hear that. How long have you had it?"
+    }
+  ],
+  "language": "en"
+}
+```
+
+**Response:**
+```json
+{
+  "report": "{\"patient_symptoms\":\"Headache\",\"diagnosis\":\"Tension headache\",\"medications\":[\"Ibuprofen 400mg\"],\"lifestyle_advice\":\"Rest, hydration\",\"precautions\":\"Avoid bright lights\",\"follow_up\":\"If persists >3 days\"}"
+}
+```
+
+**Status Codes:**
+- `200 OK`: Report generated successfully
+- `400 Bad Request`: Invalid conversation history
+- `500 Internal Server Error`: Report generation failed
+
 ---
 
 ## 7. Service Layer
@@ -594,24 +679,71 @@ class GeminiService:
 ```python
 def _build_medical_prompt(self, message, history, language):
     system_prompt = f"""
-    You are MediVoice AI, a world-class medical doctor providing 
-    authoritative medical guidance in {language}.
+    You are MediVoice AI, a world-class physician providing 
+    medical guidance in {language}.
     
-    Guidelines:
-    - Provide specific, actionable medical advice
-    - Recommend medications with dosages when appropriate
-    - Detect emergencies and alert immediately
-    - Maintain empathetic, professional tone
-    - Consider conversation history for context
+    HOW YOU PRACTICE MEDICINE:
     
-    CRITICAL: If life-threatening symptoms detected, 
-    start response with "🚨 EMERGENCY"
+    PHASE 1: INQUIRY & TRIAGE (CRITICAL):
+    - If symptoms are vague, ask 2-3 clarifying questions first
+    - Ask about: Duration, Severity, Other symptoms
+    - Example: "I'm sorry to hear that. How long have you had it?"
+    
+    PHASE 2: DIAGNOSIS & TREATMENT:
+    - State likely diagnosis
+    - Prescribe exact medications (Name, Dosage, Frequency, Duration)
+    - Explain how treatment works
+    
+    PHASE 3: HOLISTIC CARE (REQUIRED):
+    - ALWAYS include "Lifestyle & Diet" recommendations
+    - ALWAYS include specific "Precautions"
+    - Example: "For diet, avoid salty foods. As a precaution, stop if dizzy."
+    
+    EMPATHY & HUMAN CONNECTION:
+    - START every response by validating feelings
+    - Be warm and reassuring
+    
+    SAFETY:
+    - Check allergies before prescribing
+    - Escalate emergencies immediately
     """
     
-    # Combine system prompt, history, and current message
     full_prompt = f"{system_prompt}\n\nConversation History:\n{history}\n\nUser: {message}"
-    
     return full_prompt
+```
+
+**Report Generation:**
+
+```python
+async def generate_consultation_report(
+    self,
+    conversation_history: List[Dict]
+) -> str:
+    """
+    Generate structured medical report from conversation
+    
+    Returns JSON string with:
+    - patient_symptoms: Summary of reported symptoms
+    - diagnosis: Likely diagnosis provided
+    - medications: List of prescribed medications
+    - lifestyle_advice: Diet and lifestyle recommendations
+    - precautions: Safety warnings
+    - follow_up: When to seek further care
+    """
+    transcript = "\n".join([f"{msg['role']}: {msg['content']}" 
+                           for msg in conversation_history])
+    
+    prompt = f"""
+    Analyze this consultation and generate a structured report.
+    Output in JSON format with fields: patient_symptoms, diagnosis,
+    medications, lifestyle_advice, precautions, follow_up.
+    
+    TRANSCRIPT:
+    {transcript}
+    """
+    
+    response = self.model.generate_content(prompt)
+    return response.text  # Returns JSON string
 ```
 
 ### 7.2 ElevenLabs Service (elevenlabs_service.py)

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Mic, MicOff, Volume2, Globe, Heart, Activity, Phone, PhoneOff } from 'lucide-react'
+import { Mic, MicOff, Volume2, Globe, Heart, Activity, Phone, PhoneOff, FileDown } from 'lucide-react'
+import { jsPDF } from "jspdf"
 import './App.css'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
@@ -193,6 +194,78 @@ function App() {
     }
   }
 
+  const generateReport = async () => {
+    if (conversation.length === 0) return
+    setStatus('Generating Report...')
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversation_history: conversation, language: selectedLanguage })
+      })
+      const data = await response.json()
+      let reportData = {}
+      try {
+          reportData = JSON.parse(data.report)
+      } catch (e) {
+          console.error("Failed to parse report JSON", e)
+          reportData = { diagnosis: "Error parsing report", patient_symptoms: "N/A" }
+      }
+
+      const doc = new jsPDF()
+      doc.setFontSize(22)
+      doc.setTextColor(0, 102, 204)
+      doc.text("MediVoice AI - Medical Report", 20, 20)
+      doc.setFontSize(10)
+      doc.setTextColor(100)
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 20, 30)
+
+      let y = 45
+      const addSection = (title, content) => {
+          if (!content) return
+          doc.setFontSize(14)
+          doc.setTextColor(0, 51, 102)
+          doc.text(title, 20, y)
+          y += 8
+          doc.setFontSize(11)
+          doc.setTextColor(0)
+          const lines = doc.splitTextToSize(content, 170)
+          doc.text(lines, 20, y)
+          y += (lines.length * 6) + 10
+          if (y > 270) { doc.addPage(); y = 20; }
+      }
+
+      addSection("Patient Symptoms", reportData.patient_symptoms)
+      addSection("Diagnosis", reportData.diagnosis)
+      
+      doc.setFontSize(14)
+      doc.setTextColor(0, 51, 102)
+      doc.text("Medications", 20, y)
+      y += 8
+      doc.setFontSize(11)
+      doc.setTextColor(0)
+      if (Array.isArray(reportData.medications)) {
+          reportData.medications.forEach(m => {
+              doc.text(`• ${m}`, 25, y)
+              y += 6
+          })
+      } else {
+          doc.text(reportData.medications || "None", 25, y)
+      }
+      y += 10
+      
+      addSection("Lifestyle & Diet", reportData.lifestyle_advice)
+      addSection("Precautions", reportData.precautions)
+      addSection("Follow Up", reportData.follow_up)
+
+      doc.save("MediVoice_Report.pdf")
+      setStatus('Report Downloaded')
+    } catch (error) {
+      console.error(error)
+      setStatus('Report Gen Error')
+    }
+  }
+
   return (
     <div className="app">
       {/* Header */}
@@ -335,6 +408,19 @@ function App() {
             </button>
           )}
         </div>
+
+        {/* Report Download */}
+        {conversation.length > 0 && (
+          <div className="report-action">
+            <button 
+              className="download-button"
+              onClick={generateReport}
+            >
+              <FileDown className="icon-sm" />
+              <span>Download Medical Report</span>
+            </button>
+          </div>
+        )}
 
         {/* Disclaimer */}
         <div className="disclaimer">
