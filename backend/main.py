@@ -103,10 +103,15 @@ async def create_conversation(request: ConversationRequest):
         )
         
         # Generate voice audio using ElevenLabs
-        audio_data = await elevenlabs_service.text_to_speech(
-            text=ai_response["text"],
-            language=request.language
-        )
+        audio_data = {"audio_url": None}
+        try:
+            audio_data = await elevenlabs_service.text_to_speech(
+                text=ai_response["text"],
+                language=request.language
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate speech: {str(e)}")
+            # Continue without audio
         
         # Return response
         return ConversationResponse(

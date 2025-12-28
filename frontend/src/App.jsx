@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Mic, MicOff, Volume2, Globe, Heart, Activity, Phone, PhoneOff, FileDown } from 'lucide-react'
 import { jsPDF } from "jspdf"
+import ReactMarkdown from 'react-markdown'
 import './App.css'
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
@@ -25,6 +26,14 @@ function App() {
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [conversation, setConversation] = useState([])
+  // Use ref to track conversation state for event listeners
+  const conversationRef = useRef([])
+  
+  // Sync ref with state
+  useEffect(() => {
+    conversationRef.current = conversation
+  }, [conversation])
+
   const [status, setStatus] = useState('Ready to start')
   const [currentTranscript, setCurrentTranscript] = useState('')
   
@@ -57,15 +66,13 @@ function App() {
       recognitionRef.current.lang = languageCodes[selectedLanguage] || 'en-US'
       
       recognitionRef.current.onresult = async (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0])
-          .map(result => result.transcript)
-          .join('')
+        const lastResultIndex = event.results.length - 1
+        const transcript = event.results[lastResultIndex][0].transcript
         
         setCurrentTranscript(transcript)
         
         // If final result, send to backend
-        if (event.results[event.results.length - 1].isFinal) {
+        if (event.results[lastResultIndex].isFinal) {
           await handleUserSpeech(transcript)
           setCurrentTranscript('')
         }
@@ -85,17 +92,20 @@ function App() {
     } else {
       setStatus('Speech recognition not supported in this browser')
     }
-  }, [selectedLanguage])
+  }, [selectedLanguage]) // Only depend on language
 
   // Handle user speech
   const handleUserSpeech = async (transcript) => {
     if (!transcript.trim()) return
 
-    // Add user message to conversation
-    setConversation(prev => [...prev, {
-      role: 'user',
-      content: transcript
-    }])
+    // Create updated conversation history immediately to avoid stale state
+    const newMessage = { role: 'user', content: transcript }
+    // USE REF TO GET LATEST STATE
+    const currentHistory = conversationRef.current
+    const updatedHistory = [...currentHistory, newMessage]
+    
+    // Add user message to conversation state
+    setConversation(prev => [...prev, newMessage])
 
     setStatus('AI is thinking...')
 
@@ -109,7 +119,7 @@ function App() {
         body: JSON.stringify({
           message: transcript,
           language: selectedLanguage,
-          conversation_history: conversation
+          conversation_history: updatedHistory // Send immediate history from REF
         })
       })
 
@@ -144,12 +154,18 @@ function App() {
     }
   }
 
+  // Sync isListening ref with state
+  const isListeningRef = useRef(false)
+  useEffect(() => {
+    isListeningRef.current = isListening
+  }, [isListening])
+
   // Play audio
   const playAudio = (audioUrl) => {
     return new Promise((resolve) => {
       if (audioRef.current) {
         // IMPORTANT: Stop speech recognition to prevent feedback loop
-        if (recognitionRef.current && isListening) {
+        if (recognitionRef.current && isListeningRef.current) {
           recognitionRef.current.stop()
         }
         
@@ -159,7 +175,8 @@ function App() {
           setIsSpeaking(false)
           
           // Resume speech recognition after AI finishes speaking
-          if (recognitionRef.current && isListening) {
+          // Use REF to check true state
+          if (recognitionRef.current && isListeningRef.current) {
             try {
               recognitionRef.current.start()
             } catch (e) {
@@ -335,7 +352,7 @@ function App() {
               {conversation.map((msg, index) => (
                 <div key={index} className={`message ${msg.role}`}>
                   <div className="message-content">
-                    {msg.content}
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
                 </div>
               ))}

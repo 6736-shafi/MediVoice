@@ -267,6 +267,30 @@ body {
   border: 1px solid var(--border);
 }
 
+/* Markdown Styles */
+.message-content p {
+  margin-bottom: 0.75rem;
+}
+
+.message-content p:last-child {
+  margin-bottom: 0;
+}
+
+.message-content ul,
+.message-content ol {
+  margin-bottom: 0.75rem;
+  padding-left: 1.5rem;
+}
+
+.message-content li {
+  margin-bottom: 0.25rem;
+}
+
+.message-content strong {
+  font-weight: 700;
+  color: inherit;
+}
+
 /* Typing Indicator */
 .typing-indicator {
   display: flex;
