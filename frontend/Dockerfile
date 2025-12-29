@@ -1,20 +1,21 @@
-FROM node:20-alpine
-
+# Build stage
+FROM node:20-alpine AS builder
 WORKDIR /app
-
-# Install dependencies
 COPY package*.json ./
 RUN npm install
-
-# Copy source
 COPY . .
-
-# Build with backend URL
-
 RUN npm run build
 
-# Install express for the production server
-RUN npm install express
+# Production stage
+FROM node:20-alpine
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+# We need package.json AND package-lock.json for clean install
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/server.js ./
 
-# Start the server
+# Install production dependencies (including express, since we added it)
+RUN npm install --omit=dev
+
+ENV PORT=8080
 CMD ["node", "server.js"]

@@ -57,3 +57,11 @@ node_modules/
 .next/
 out/
 dist/
+
+# Test files
+test_*.py
+*_test.py
+
+# Build artifacts
+*.pyc
+.cache/

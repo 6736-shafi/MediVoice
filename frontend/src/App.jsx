@@ -80,13 +80,44 @@ function App() {
       
       recognitionRef.current.onerror = (event) => {
         console.error('Speech recognition error:', event.error)
-        setStatus(`Error: ${event.error}`)
+        
+        // Intelligent error handling
+        if (event.error === 'network') {
+          setStatus('Connection parsing error. Retrying...')
+          // Small delay before retry to prevent thrashing
+          setTimeout(() => {
+            if (isListening && recognitionRef.current) {
+              try {
+                recognitionRef.current.stop() /* Reset state */
+              } catch (e) { /* ignore */ }
+            }
+          }, 1000)
+        } else if (event.error === 'not-allowed') {
+          setIsListening(false)
+          setStatus('Microphone access denied')
+        } else if (event.error === 'no-speech') {
+          // Ignore no-speech errors, just stay listing
+          // Don't change status to error
+        } else {
+           setStatus(`Error: ${event.error}`)
+        }
       }
       
       recognitionRef.current.onend = () => {
         if (isListening) {
           // Restart if still supposed to be listening
-          recognitionRef.current.start()
+          // Add small delay to prevent CPU spinning if immediate failure
+          setTimeout(() => {
+            if (isListening && recognitionRef.current) {
+              try {
+                recognitionRef.current.start()
+              } catch (e) {
+                console.log('Recognition start failed', e)
+                setIsListening(false)
+                setStatus('Click Start to resume')
+              }
+            }
+          }, 500)
         }
       }
     } else {
