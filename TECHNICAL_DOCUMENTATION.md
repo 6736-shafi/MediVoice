@@ -1,8 +1,17 @@
 # MediVoice AI - Technical Documentation
 
-**Version:** 1.1.0  
-**Last Updated:** December 29, 2025  
+**Version:** 1.0.0  
+**Last Updated:** December 31, 2025  
 **Author:** MediVoice AI Team
+
+## Production Deployment
+
+**Current Live Services:**
+- **Frontend**: https://medivoice-web-409417803362.us-central1.run.app/
+- **Backend API**: https://medivoice-api-409417803362.us-central1.run.app/
+- **Project ID**: root-furnace-428717-f6
+- **Region**: us-central1
+- **Platform**: Google Cloud Run
 
 ---
 

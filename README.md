@@ -4,6 +4,11 @@
 
 MediVoice AI is an intelligent, multilingual voice medical assistant that combines the power of Google Gemini AI with ElevenLabs' natural voice synthesis to provide accessible healthcare guidance in 10+ languages.
 
+## 🎬 Demo & Live App
+
+- **🎥 Demo Video**: [Watch Demo on YouTube](https://www.youtube.com/watch?v=TVYbwB-6wnY)
+- **🚀 Live Application**: [Try MediVoice Now](https://medivoice-web-409417803362.us-central1.run.app/)
+
 ![MediVoice AI](https://img.shields.io/badge/Status-Active-success)
 ![Python](https://img.shields.io/badge/Python-3.11-blue)
 ![React](https://img.shields.io/badge/React-18.3-61dafb)
@@ -90,8 +95,8 @@ Ensure you have the following installed:
 
 #### 1. Clone & Setup Backend
 ```bash
-git clone <repository-url>
-cd medivoice-ai/backend
+git clone https://github.com/6736-shafi/MediVoice.git
+cd MediVoice/backend
 
 # Virtual Env
 python3 -m venv venv
@@ -123,8 +128,11 @@ Run Frontend:
 npm run dev
 ```
 
-### Production Deployment
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions on deploying to Google Cloud Run.
+**Current Production Services:**
+- **Frontend**: https://medivoice-web-409417803362.us-central1.run.app/
+- **Backend API**: https://medivoice-api-409417803362.us-central1.run.app/
+- **Region**: us-central1 (Iowa, USA)
+- **Platform**: Google Cloud Run
 
 ---
 

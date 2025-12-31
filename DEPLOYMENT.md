@@ -5,6 +5,20 @@ We separate the application into two services:
 1. **`medivoice-api`**: The Python FastAPI Backend.
 2. **`medivoice-web`**: The React Frontend (served via Nginx or a lightweight Node server).
 
+## Current Production Deployment
+
+**Project ID**: `root-furnace-428717-f6`  
+**Region**: `us-central1`
+
+**Services**:
+- **Backend**: `medivoice-api`
+  - URL: https://medivoice-api-409417803362.us-central1.run.app/
+  - Latest Revision: medivoice-api-00011-rnv
+  
+- **Frontend**: `medivoice-web`  
+  - URL: https://medivoice-web-409417803362.us-central1.run.app/
+  - Latest Revision: medivoice-web-00001-tz5
+
 ---
 
 ## Prerequisites
